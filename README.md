@@ -1,4 +1,6 @@
-# Favicon Finder
+# Favicon Finder - Quickly fetch and download favicons for any website using Google and DuckDuckGo icon APIs. 
+
+https://jamith.com/favicon-finder/
 
 Tiny web tool to fetch, copy and download favicons for any website using several public favicon services.
 
