@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Favicon Finder — Fetch favicon of a any website</title>
+    <meta name="description" content="find-favicon: Quickly fetch and download favicons for any website using Google and DuckDuckGo icon APIs. Small, fast, and mobile-friendly.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="">
+
+    <!-- Open Graph / Social -->
+    <meta property="og:site_name" content="Favicon Finder">
+    <meta property="og:title" content="Favicon Finder — Fetch favicon of a any website">
+    <meta property="og:description" content="Fetch, copy, and download favicons for any site quickly using Google and DuckDuckGo APIs.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Favicon Finder — Fetch favicon of a any website">
+    <meta name="twitter:description" content="Fetch, copy, and download favicons for any site quickly using Google and DuckDuckGo APIs.">
+    <meta name="theme-color" content="#0ea5e9">
+
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Favicon Finder",
+      "description": "A tiny web tool to fetch, copy and download favicons using Google and DuckDuckGo icon APIs.",
+      "applicationCategory": "DeveloperTool"
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-start sm:justify-center p-4">
+<div class="w-full max-w-xl sm:max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-6 mt-0 sm:mt-6">
+    <h1 class="text-2xl font-bold text-center text-blue-600">Favicon Finder</h1>
+    <p class="text-sm text-center text-gray-500">🔍 Fetch and download favicons quickly using Google and DuckDuckGo APIs</p>
+    <!-- Toast for non-blocking feedback -->
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded opacity-0 pointer-events-none transition-opacity">&nbsp;</div>
+
+    <!-- Input Section -->
+    <div>
+        <label for="domainInput" class="block text-sm font-semibold mb-1">Website URL</label>
+        <input id="domainInput" name="domain" type="url" inputmode="url" autocomplete="url" placeholder="e.g. https://bbc.com" aria-label="Website URL" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400">
+        <p id="errorText" class="text-red-500 text-sm mt-1 hidden">⚠️ Please enter a valid URL</p>
+    </div>
+
+    <!-- Size Selector -->
+    <div>
+        <label for="sizeSelect" class="block text-sm font-semibold mb-1">Favicon Size</label>
+        <select id="sizeSelect" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400" aria-label="Favicon Size">
+            <option value="16">16 px</option>
+            <option value="32" selected>32 px</option>
+            <option value="64">64 px</option>
+            <option value="96">96 px</option>
+            <option value="128">128 px</option>
+        </select>
+    </div>
+
+    <!-- Action Button -->
+    <button id="fetchBtn" type="button" class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition">
+        Fetch Icons
+    </button>
+
+    <!-- Results Section -->
+    <div id="results" class="space-y-4 hidden">
+        <h2 class="text-lg font-semibold text-gray-700">Results</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Google -->
+            <div class="border rounded-lg p-3 flex flex-col items-center">
+                <p class="font-medium text-sm mb-2 text-gray-600">Google API</p>
+                <img id="googleIcon" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Google favicon" class="w-12 h-12 sm:w-16 sm:h-16 mb-3 border rounded-lg object-contain">
+                <div class="flex gap-2">
+                    <button id="copyGoogle" class="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Copy URL</button>
+                    <button id="downloadGoogle" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Download</button>
+                </div>
+            </div>
+
+            <!-- DuckDuckGo -->
+            <div class="border rounded-lg p-3 flex flex-col items-center">
+                <p class="font-medium text-sm mb-2 text-gray-600">DuckDuckGo</p>
+                <img id="duckIcon" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="DuckDuckGo favicon" class="w-12 h-12 sm:w-16 sm:h-16 mb-3 border rounded-lg object-contain">
+                <div class="flex gap-2">
+                    <button id="copyDuck" class="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Copy URL</button>
+                    <button id="downloadDuck" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Download</button>
+                </div>
+            </div>
+
+         </div>
+     </div>
+ </div>
+
+<script>
+    const domainInput = document.getElementById("domainInput");
+    const sizeSelect = document.getElementById("sizeSelect");
+    const fetchBtn = document.getElementById("fetchBtn");
+    const errorText = document.getElementById("errorText");
+    const results = document.getElementById("results");
+
+    const googleIcon = document.getElementById("googleIcon");
+    const duckIcon = document.getElementById("duckIcon");
+
+    const copyGoogle = document.getElementById("copyGoogle");
+    const copyDuck = document.getElementById("copyDuck");
+    const downloadGoogle = document.getElementById("downloadGoogle");
+    const downloadDuck = document.getElementById("downloadDuck");
+
+    // toast timeout tracker so multiple calls behave properly
+    let toastTimeout = null;
+
+    function extractDomain(url) {
+        try {
+            const cleanUrl = url.trim();
+            const parsed = new URL(cleanUrl.startsWith("http") ? cleanUrl : "https://" + cleanUrl);
+            return parsed.hostname.replace(/^www\./, "");
+        } catch {
+            return null;
+        }
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied to clipboard');
+        }).catch(() => {
+            showToast('Copy failed');
+        });
+    }
+
+    function showToast(message, ms = 1800) {
+        const toast = document.getElementById('toast');
+        // clear any existing timeout so the new toast duration starts fresh
+        if (toastTimeout) {
+            clearTimeout(toastTimeout);
+            toastTimeout = null;
+        }
+
+        toast.textContent = message;
+
+        // ensure we start from the hidden state (remove any lingering "opacity-100")
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+        // allow pointer events while visible
+        toast.classList.remove('pointer-events-none');
+
+        // Force a reflow so the transition will run reliably
+        // eslint-disable-next-line no-unused-expressions
+        void toast.offsetWidth;
+
+        // show toast
+        toast.classList.remove('opacity-0');
+        toast.classList.add('opacity-100');
+
+        // schedule hide
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+            toast.classList.add('pointer-events-none');
+            toastTimeout = null;
+        }, ms);
+    }
+
+    function downloadImage(url, domain, source) {
+        // prefer .ico when URL points to an ICO file, otherwise default to .png
+        const ext = url && url.includes('.ico') ? 'ico' : 'png';
+        const link = document.createElement("a");
+        link.href = url || '#';
+        link.download = `${domain}_${source}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    fetchBtn.addEventListener("click", () => {
+        const inputValue = domainInput.value.trim();
+        const size = sizeSelect.value;
+        const domain = extractDomain(inputValue);
+
+        if (!domain) {
+            errorText.classList.remove("hidden");
+            results.classList.add("hidden");
+            return;
+        }
+
+        errorText.classList.add("hidden");
+
+        // Build URLs
+        const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
+        const duckUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+
+        // set simple direct URLs
+        googleIcon.src = googleUrl;
+        duckIcon.src = duckUrl;
+
+        results.classList.remove("hidden");
+
+        // Copy / Download actions for direct services
+        copyGoogle.onclick = () => copyToClipboard(googleUrl);
+        copyDuck.onclick = () => copyToClipboard(duckUrl);
+
+        downloadGoogle.onclick = () => downloadImage(googleUrl, domain, "google");
+        downloadDuck.onclick = () => downloadImage(duckUrl, domain, "duckduckgo");
+
+     });
+ </script>
+ </body>
+ </html>
